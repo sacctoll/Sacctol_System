@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sacctol_system/models/item.dart';
+import 'package:sacctol_system/pages/protected_saved_carts_page.dart';
 import 'package:sacctol_system/providers/item_provider.dart';
 import 'package:sacctol_system/widgets/item_card.dart';
 
@@ -41,7 +42,11 @@ class _ItemsPageState extends State<ItemsPage> {
             tooltip: 'Create New Item',
           ),
           IconButton(
-            onPressed: () => Navigator.pushNamed(context, '/saved'),
+            onPressed: () => Navigator.push(
+  context,
+  MaterialPageRoute(builder: (_) => const ProtectedSavedCartsPage()),
+),
+
             icon: const Icon(Icons.list),
             tooltip: 'Saved Carts',
           ),
