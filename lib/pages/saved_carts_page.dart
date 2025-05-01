@@ -67,7 +67,7 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
   double _calculateTotalPrice(List<Map<String, dynamic>> carts) {
     return carts.fold(0, (sum, cart) {
       final items = (cart['items'] as List)
-          .map((e) => Item.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => Item.fromJson(Map<String, dynamic>.from(e['item'])))
           .toList();
       return sum + items.fold(0, (s, item) => s + item.price);
     });
@@ -76,7 +76,7 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
   double _calculateTotalOrigin(List<Map<String, dynamic>> carts) {
     return carts.fold(0, (sum, cart) {
       final items = (cart['items'] as List)
-          .map((e) => Item.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => Item.fromJson(Map<String, dynamic>.from(e['item'])))
           .toList();
       return sum + items.fold(0, (s, item) => s + item.originPrice);
     });
@@ -179,7 +179,7 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
                         final cart = filteredCarts[index];
                         final date = DateTime.parse(cart['date']);
                         final items = (cart['items'] as List)
-                            .map((e) => Item.fromJson(Map<String, dynamic>.from(e)))
+                            .map((e) => Item.fromJson(Map<String, dynamic>.from(e['item'])))
                             .toList();
                         final totalPrice = _calculateTotalPrice([cart]);
                         final totalOrigin = _calculateTotalOrigin([cart]);
