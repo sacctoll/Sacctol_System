@@ -5,12 +5,19 @@ import 'package:sacctol_system/utils/txt_download.dart';
 import 'package:intl/intl.dart';
 import 'dart:html' as html;
 
-class CartPage extends StatelessWidget {
-   CartPage({super.key});
+class CartPage extends StatefulWidget {
+  const CartPage({super.key});
 
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
   final NumberFormat formatter = NumberFormat("#,###", "en_US");
+  bool _includeDelivery = false;
+  final TextEditingController _deliveryController = TextEditingController();
 
-  String generateReceipt(cart) {
+  String generateReceipt(cart, {double? deliveryCharge}) {
     final buffer = StringBuffer();
     const int width = 40;
     final timestamp = DateTime.now();
@@ -35,15 +42,15 @@ class CartPage extends StatelessWidget {
       final count = entry['count'];
       final price = item.price * count;
       buffer.writeln(
-        padFourColumns(
-          item.name,
-          item.size,
-          'x$count',
-          "${formatter.format(price)} L.L",
-          width,
-        ),
+        padFourColumns(item.name, item.size, 'x$count', "${formatter.format(price)} L.L", width),
       );
       total += price;
+    }
+
+    if (deliveryCharge != null && deliveryCharge > 0) {
+      buffer.writeln(blankLine(width));
+      buffer.writeln(padBoth("Delivery", "${formatter.format(deliveryCharge)} L.L", width));
+      total += deliveryCharge;
     }
 
     buffer.writeln(blankLine(width));
@@ -65,20 +72,20 @@ class CartPage extends StatelessWidget {
 
   void printReceipt(String receiptText) {
     final htmlContent = '''
-    <html>
-      <head>
-        <title>Receipt</title>
-        <style>
-          body { font-family: monospace; font-size: 12px; margin: 20px; }
-          pre { white-space: pre-wrap; word-wrap: break-word; }
-        </style>
-      </head>
-      <body>
-        <pre>$receiptText</pre>
-        <script>window.print();</script>
-      </body>
-    </html>
-  ''';
+      <html>
+        <head>
+          <title>Receipt</title>
+          <style>
+            body { font-family: monospace; font-size: 12px; margin: 20px; }
+            pre { white-space: pre-wrap; word-wrap: break-word; }
+          </style>
+        </head>
+        <body>
+          <pre>$receiptText</pre>
+          <script>window.print();</script>
+        </body>
+      </html>
+    ''';
 
     final blob = html.Blob([htmlContent], 'text/html');
     final url = html.Url.createObjectUrlFromBlob(blob);
@@ -103,6 +110,28 @@ class CartPage extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // ✅ Delivery Option
+            Row(
+              children: [
+                Checkbox(
+                  value: _includeDelivery,
+                  onChanged: (val) => setState(() => _includeDelivery = val ?? false),
+                ),
+                const Text("Include Delivery Charge"),
+                const SizedBox(width: 12),
+                if (_includeDelivery)
+                  Expanded(
+                    child: TextField(
+                      controller: _deliveryController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Delivery Charge (L.L)",
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
             Expanded(
               child: cart.isEmpty
                   ? const Center(child: Text('Your cart is empty.', style: TextStyle(fontSize: 18)))
@@ -129,6 +158,7 @@ class CartPage extends StatelessWidget {
                       },
                     ),
             ),
+
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -142,43 +172,37 @@ class CartPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // ✅ Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton.icon(
                   icon: const Icon(Icons.download),
                   label: const Text('Download as .txt'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
                   onPressed: () {
-                    downloadTextFile(generateReceipt(cart), "receipt.txt");
+                    final delivery = _includeDelivery ? double.tryParse(_deliveryController.text) ?? 0.0 : null;
+                    downloadTextFile(generateReceipt(cart, deliveryCharge: delivery), "receipt.txt");
                   },
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.save),
                   label: const Text('Save Cart'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
                   onPressed: () {
-                    cartProvider.saveCart();
+                    cartProvider.saveCart(); // ✅ Never saves delivery
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Cart saved!")),
+                      const SnackBar(duration: Duration(milliseconds: 300), content: Text("Cart saved!")),
                     );
                   },
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.print),
                   label: const Text('Print'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryColor, foregroundColor: Colors.white),
                   onPressed: () {
-                    final receipt = generateReceipt(cartProvider.items);
+                    final receipt = generateReceipt(cart); // ✅ Never includes delivery
                     printReceipt(receipt);
                   },
                 ),
@@ -190,6 +214,7 @@ class CartPage extends StatelessWidget {
       ),
     );
   }
+
 
   // === Helper Functions ===
   String centerText(String text, int width) {

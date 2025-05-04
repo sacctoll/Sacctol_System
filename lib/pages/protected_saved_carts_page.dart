@@ -11,18 +11,28 @@ class ProtectedSavedCartsPage extends StatelessWidget {
   }
 
   void _showPasswordDialog(BuildContext context) async {
-    final TextEditingController _passwordController = TextEditingController();
-    final correctPassword = 'admin123'; // Change as needed
+  final TextEditingController _passwordController = TextEditingController();
+  final correctPassword = 'admin123'; // Change as needed
 
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
+  final formKey = GlobalKey<FormState>();
+
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) {
+      return AlertDialog(
         title: const Text('Enter Password'),
-        content: TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Password'),
+            onFieldSubmitted: (_) {
+              final entered = _passwordController.text;
+              Navigator.of(context).pop(entered == correctPassword);
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -37,15 +47,17 @@ class ProtectedSavedCartsPage extends StatelessWidget {
             },
           ),
         ],
-      ),
-    );
-
-    if (result == true) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SavedCartsPage()),
       );
-    } else {
-      Navigator.of(context).pop(); // Exit page if password failed
-    }
+    },
+  );
+
+  if (result == true) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const SavedCartsPage()),
+    );
+  } else {
+    Navigator.of(context).pop(); // Exit page if password failed
   }
+}
+
 }

@@ -13,6 +13,14 @@ class CartProvider with ChangeNotifier {
   CartProvider() {
     loadCart();
   }
+  int getItemCount(Item item) {
+  final existing = _items.firstWhere(
+    (element) => element['item'] == item,
+    orElse: () => {},
+  );
+  return existing.isNotEmpty ? existing['count'] as int : 0;
+}
+
 
   Future<void> loadCart() async {
     final prefs = await SharedPreferences.getInstance();

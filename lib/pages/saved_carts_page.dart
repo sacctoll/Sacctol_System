@@ -60,45 +60,50 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
   }
 
   List<Map<String, dynamic>> get _filteredCarts {
-    return _savedCarts.where((cart) {
-      final date = DateTime.parse(cart['date']);
-      return _filterCart(date);
-    }).toList();
+    final filtered =
+        _savedCarts.where((cart) {
+          final date = DateTime.parse(cart['date']);
+          return _filterCart(date);
+        }).toList();
+
+    return filtered.reversed.toList();
   }
 
-double _calculateTotalPrice(List<Map<String, dynamic>> carts) {
-  return carts.fold(0, (sum, cart) {
-    final items = (cart['items'] as List).map((e) {
-      final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
-      final count = e['count'] ?? 1;
-      return {'item': item, 'count': count};
-    }).toList();
+  double _calculateTotalPrice(List<Map<String, dynamic>> carts) {
+    return carts.fold(0, (sum, cart) {
+      final items =
+          (cart['items'] as List).map((e) {
+            final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
+            final count = e['count'] ?? 1;
+            return {'item': item, 'count': count};
+          }).toList();
 
-    return sum + items.fold(0, (s, entry) {
-      final item = entry['item'] as Item;
-      final count = entry['count'] as int;
-      return s + item.price * count;
+      return sum +
+          items.fold(0, (s, entry) {
+            final item = entry['item'] as Item;
+            final count = entry['count'] as int;
+            return s + item.price * count;
+          });
     });
-  });
-}
+  }
 
+  double _calculateTotalOrigin(List<Map<String, dynamic>> carts) {
+    return carts.fold(0, (sum, cart) {
+      final items =
+          (cart['items'] as List).map((e) {
+            final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
+            final count = e['count'] ?? 1;
+            return {'item': item, 'count': count};
+          }).toList();
 
-double _calculateTotalOrigin(List<Map<String, dynamic>> carts) {
-  return carts.fold(0, (sum, cart) {
-    final items = (cart['items'] as List).map((e) {
-      final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
-      final count = e['count'] ?? 1;
-      return {'item': item, 'count': count};
-    }).toList();
-
-    return sum + items.fold(0, (s, entry) {
-      final item = entry['item'] as Item;
-      final count = entry['count'] as int;
-      return s + item.originPrice * count;
+      return sum +
+          items.fold(0, (s, entry) {
+            final item = entry['item'] as Item;
+            final count = entry['count'] as int;
+            return s + item.originPrice * count;
+          });
     });
-  });
-}
-
+  }
 
   Widget _buildTotals(BuildContext context) {
     final filteredCarts = _filteredCarts;
@@ -250,12 +255,13 @@ double _calculateTotalOrigin(List<Map<String, dynamic>> carts) {
                                   Theme.of(context).primaryColor,
                               iconColor: Theme.of(context).primaryColor,
                               title: Text(
-                                'Cart Date: ${date.toLocal().toString().split(' ')[0]}',
+                                '#${filteredCarts.length - index} | Cart Date: ${date.toLocal().toString().split(' ')[0]}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Theme.of(context).primaryColor,
                                 ),
                               ),
+
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -310,11 +316,31 @@ double _calculateTotalOrigin(List<Map<String, dynamic>> carts) {
                                       color: Colors.red,
                                     ),
                                     onPressed: () async {
-                                      await _deleteCart(index);
+                                      final cartToDelete = filteredCarts[index];
+                                      final actualIndex = _savedCarts.indexOf(
+                                        cartToDelete,
+                                      );
+                                      if (actualIndex != -1) {
+                                        await _deleteCart(actualIndex);
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            duration: Duration(
+                                              milliseconds: 300,
+                                            ),
+                                            content: Text('Cart deleted'),
+                                          ),
+                                        );
+                                      }
+
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
                                         const SnackBar(
+                                          duration: const Duration(
+                                            milliseconds: 300,
+                                          ),
                                           content: Text('Cart deleted'),
                                         ),
                                       );
