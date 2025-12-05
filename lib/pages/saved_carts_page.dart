@@ -78,12 +78,18 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
             return {'item': item, 'count': count};
           }).toList();
 
-      return sum +
-          items.fold(0, (s, entry) {
-            final item = entry['item'] as Item;
-            final count = entry['count'] as int;
-            return s + item.price * count;
-          });
+      final subtotal = items.fold(0.0, (s, entry) {
+        final item = entry['item'] as Item;
+        final count = entry['count'] as int;
+        return s + item.price * count;
+      });
+
+      final hasDiscount = cart['hasDiscount'] ?? false;
+      final discountAmount = hasDiscount ? subtotal * 0.20 : 0.0;
+      final subtotalAfterDiscount = subtotal - discountAmount;
+      final deliveryCharge = (cart['deliveryCharge'] ?? 0).toDouble();
+
+      return sum + subtotalAfterDiscount + deliveryCharge;
     });
   }
 
@@ -229,6 +235,7 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
                         itemBuilder: (context, index) {
                           final cart = filteredCarts[index];
                           final date = DateTime.parse(cart['date']);
+                          final hasDiscount = cart['hasDiscount'] ?? false;
                           final items =
                               (cart['items'] as List)
                                   .map(
@@ -278,6 +285,23 @@ class _SavedCartsPageState extends State<SavedCartsPage> {
                                       color: Theme.of(context).primaryColor,
                                     ),
                                   ),
+                                  if (hasDiscount)
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        '20% OFF',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                               children: [

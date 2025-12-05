@@ -2,10 +2,11 @@ import 'item.dart';
 
 class CartModel {
   final String id;
-  final String location; // "Table 1", "Table 2", etc., or "Outside"
+  final String location; // "Table 1", "Table 2", etc., or "Takeaway"
   final String customerName;
   final List<Map<String, dynamic>> items; // {"item": Item, "count": int}
   final double deliveryCharge;
+  final bool hasDiscount; // 20% discount flag
   final DateTime createdAt;
 
   CartModel({
@@ -14,13 +15,18 @@ class CartModel {
     required this.customerName,
     required this.items,
     required this.deliveryCharge,
+    this.hasDiscount = false,
     required this.createdAt,
   });
 
   double get subtotal => items.fold(
       0, (sum, entry) => sum + (entry['item'].price * entry['count']));
 
-  double get total => subtotal + deliveryCharge;
+  double get discountAmount => hasDiscount ? subtotal * 0.20 : 0;
+
+  double get subtotalAfterDiscount => subtotal - discountAmount;
+
+  double get total => subtotalAfterDiscount + deliveryCharge;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -30,6 +36,7 @@ class CartModel {
             .map((e) => {"item": e['item'].toJson(), "count": e['count']})
             .toList(),
         'deliveryCharge': deliveryCharge,
+        'hasDiscount': hasDiscount,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -44,6 +51,7 @@ class CartModel {
                 })
             .toList(),
         deliveryCharge: (json['deliveryCharge'] ?? 0).toDouble(),
+        hasDiscount: json['hasDiscount'] ?? false,
         createdAt: DateTime.parse(json['createdAt']),
       );
 }

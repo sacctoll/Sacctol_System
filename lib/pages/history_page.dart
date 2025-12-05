@@ -42,7 +42,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   double _calculateCartTotal(Map<String, dynamic> cart) {
-    final items = (cart['items'] as List).map((e) {
+    final items = (cart['items'] as List? ?? []).map((e) {
       final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
       final count = e['count'] ?? 1;
       return {'item': item, 'count': count};
@@ -54,8 +54,11 @@ class _HistoryPageState extends State<HistoryPage> {
       return sum + (item.price * count);
     });
 
+    final hasDiscount = cart['hasDiscount'] ?? false;
+    final discountAmount = hasDiscount ? subtotal * 0.20 : 0.0;
+    final subtotalAfterDiscount = subtotal - discountAmount;
     final deliveryCharge = (cart['deliveryCharge'] ?? 0).toDouble();
-    return subtotal + deliveryCharge;
+    return subtotalAfterDiscount + deliveryCharge;
   }
 
   double _calculateTodayTotal() {
@@ -239,6 +242,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               final location = cart['location'] ?? '';
                               final customerName = cart['customerName'] ?? '';
                               final deliveryCharge = (cart['deliveryCharge'] ?? 0).toDouble();
+                              final hasDiscount = cart['hasDiscount'] ?? false;
                               
                               final items = (cart['items'] as List).map((e) {
                                 final item = Item.fromJson(Map<String, dynamic>.from(e['item']));
@@ -252,7 +256,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                 return sum + (item.price * count);
                               });
 
-                              final total = subtotal + deliveryCharge;
+                              final discountAmount = hasDiscount ? subtotal * 0.20 : 0.0;
+                              final subtotalAfterDiscount = subtotal - discountAmount;
+                              final total = subtotalAfterDiscount + deliveryCharge;
 
                               return Card(
                                 shape: RoundedRectangleBorder(
@@ -311,6 +317,23 @@ class _HistoryPageState extends State<HistoryPage> {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            if (hasDiscount)
+                                              Container(
+                                                margin: const EdgeInsets.only(top: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: const Text(
+                                                  '20% OFF',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                               ),
                                           ],
@@ -405,6 +428,31 @@ class _HistoryPageState extends State<HistoryPage> {
                                               ),
                                             ],
                                           ),
+
+                                          // Discount
+                                          if (hasDiscount) ...[
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  'Discount (20%):',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.green.shade700,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '-${formatter.format(discountAmount)} L.L',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.green.shade700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
 
                                           // Delivery Charge
                                           if (deliveryCharge > 0) ...[

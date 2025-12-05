@@ -30,6 +30,7 @@ class CartProvider with ChangeNotifier {
       customerName: '',
       items: [],
       deliveryCharge: 0,
+      hasDiscount: false,
       createdAt: DateTime.now(),
     );
     _activeCarts.add(cart);
@@ -71,6 +72,7 @@ class CartProvider with ChangeNotifier {
       customerName: customerName,
       items: [],
       deliveryCharge: 0,
+      hasDiscount: false,
       createdAt: DateTime.now(),
     );
     _activeCarts.add(newCart);
@@ -85,7 +87,7 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void updateCartDetails(String cartId, {String? location, String? customerName, double? deliveryCharge}) {
+  void updateCartDetails(String cartId, {String? location, String? customerName, double? deliveryCharge, bool? hasDiscount}) {
     final index = _activeCarts.indexWhere((cart) => cart.id == cartId);
     if (index != -1) {
       final cart = _activeCarts[index];
@@ -95,6 +97,7 @@ class CartProvider with ChangeNotifier {
         customerName: customerName ?? cart.customerName,
         items: cart.items,
         deliveryCharge: deliveryCharge ?? cart.deliveryCharge,
+        hasDiscount: hasDiscount ?? cart.hasDiscount,
         createdAt: cart.createdAt,
       );
       _saveCarts();
@@ -135,6 +138,7 @@ class CartProvider with ChangeNotifier {
       customerName: cart.customerName,
       items: items,
       deliveryCharge: cart.deliveryCharge,
+      hasDiscount: cart.hasDiscount,
       createdAt: cart.createdAt,
     );
 
@@ -165,6 +169,7 @@ class CartProvider with ChangeNotifier {
         customerName: cart.customerName,
         items: items,
         deliveryCharge: cart.deliveryCharge,
+        hasDiscount: cart.hasDiscount,
         createdAt: cart.createdAt,
       );
 
@@ -200,6 +205,7 @@ class CartProvider with ChangeNotifier {
       "location": cart.location,
       "customerName": cart.customerName,
       "deliveryCharge": cart.deliveryCharge,
+      "hasDiscount": cart.hasDiscount,
       "items": cart.items.map((e) => {"item": e['item'].toJson(), "count": e['count']}).toList(),
     });
     

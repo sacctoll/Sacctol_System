@@ -191,7 +191,7 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  String generateReceipt(cart, String location, String customerName, {double? deliveryCharge}) {
+  String generateReceipt(cart, String location, String customerName, {double? deliveryCharge, bool hasDiscount = false}) {
     final buffer = StringBuffer();
     const int width = 40;
     final timestamp = DateTime.now();
@@ -222,7 +222,7 @@ class _CartPageState extends State<CartPage> {
     buffer.writeln(repeat("-", width));
     buffer.writeln(blankLine(width));
 
-    double total = 0.0;
+    double subtotal = 0.0;
     for (var entry in cart) {
       final item = entry['item'];
       final count = entry['count'];
@@ -230,11 +230,22 @@ class _CartPageState extends State<CartPage> {
       buffer.writeln(
         padFourColumns(item.name, item.size, 'x$count', "${formatter.format(price)} L.L", width),
       );
-      total += price;
+      subtotal += price;
+    }
+
+    buffer.writeln(blankLine(width));
+    buffer.writeln(repeat("-", width));
+    buffer.writeln(blankLine(width));
+    buffer.writeln(padBoth("Subtotal", "${formatter.format(subtotal)} L.L", width));
+
+    double total = subtotal;
+    if (hasDiscount) {
+      final discountAmount = subtotal * 0.20;
+      buffer.writeln(padBoth("Discount (20%)", "-${formatter.format(discountAmount)} L.L", width));
+      total -= discountAmount;
     }
 
     if (deliveryCharge != null && deliveryCharge > 0) {
-      buffer.writeln(blankLine(width));
       buffer.writeln(padBoth("Delivery", "${formatter.format(deliveryCharge)} L.L", width));
       total += deliveryCharge;
     }
@@ -377,7 +388,29 @@ class _CartPageState extends State<CartPage> {
                                   children: [
                                     if (cart.customerName.isNotEmpty)
                                       Text(cart.customerName, style: const TextStyle(fontSize: 12)),
-                                    Text('${cart.items.length} items', style: const TextStyle(fontSize: 12)),
+                                    Row(
+                                      children: [
+                                        Text('${cart.items.length} items', style: const TextStyle(fontSize: 12)),
+                                        if (cart.hasDiscount) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: const Text(
+                                              '20% OFF',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ],
                                 ),
                                 trailing: Text(
@@ -519,6 +552,77 @@ class _CartPageState extends State<CartPage> {
                               ),
                               const SizedBox(height: 16),
 
+                              // Discount Section
+                              Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(Icons.discount, color: primaryColor),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Apply 20% Discount',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Switch(
+                                            value: currentCart.hasDiscount,
+                                            activeColor: primaryColor,
+                                            onChanged: (value) {
+                                              cartProvider.updateCartDetails(
+                                                currentCart.id,
+                                                hasDiscount: value,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      if (currentCart.hasDiscount) ...[
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.green.shade300),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Discount (20%): -${NumberFormat("#,###", "en_US").format(currentCart.discountAmount)} L.L',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.green.shade700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
                               // Items List
                               Expanded(
                                 child: currentCart.items.isEmpty
@@ -598,6 +702,26 @@ class _CartPageState extends State<CartPage> {
                                           ),
                                         ],
                                       ),
+                                      if (currentCart.hasDiscount) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Discount (20%):',
+                                              style: TextStyle(fontSize: 16, color: Colors.green.shade700),
+                                            ),
+                                            Text(
+                                              '-${formatter.format(currentCart.discountAmount)} L.L',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.green.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                       if (currentCart.deliveryCharge > 0) ...[
                                         const SizedBox(height: 8),
                                         Row(
@@ -657,6 +781,7 @@ class _CartPageState extends State<CartPage> {
                                           currentCart.location,
                                           currentCart.customerName,
                                           deliveryCharge: currentCart.deliveryCharge,
+                                          hasDiscount: currentCart.hasDiscount,
                                         );
                                         downloadTextFile(receipt, "receipt.txt");
                                       },
@@ -678,6 +803,7 @@ class _CartPageState extends State<CartPage> {
                                           currentCart.location,
                                           currentCart.customerName,
                                           deliveryCharge: currentCart.deliveryCharge,
+                                          hasDiscount: currentCart.hasDiscount,
                                         );
                                         printReceipt(receipt);
                                       },
