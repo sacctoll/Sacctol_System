@@ -55,6 +55,11 @@ class _ItemsPageState extends State<ItemsPage> {
             icon: const Icon(Icons.dashboard),
             tooltip: 'Business Dashboard',
           ),
+          IconButton(
+            onPressed: () => Navigator.pushNamed(context, '/history'),
+            icon: const Icon(Icons.history),
+            tooltip: 'Today\'s History',
+          ),
         ],
       ),
       body: Padding(

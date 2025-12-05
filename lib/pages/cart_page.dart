@@ -44,7 +44,7 @@ class _CartPageState extends State<CartPage> {
 
   void _showNewCartDialog(BuildContext context, CartProvider cartProvider) {
     final TextEditingController nameController = TextEditingController();
-    String selectedLocation = 'Table 1';
+    String selectedLocation = 'Takeaway';
 
     showDialog(
       context: context,
@@ -143,11 +143,11 @@ class _CartPageState extends State<CartPage> {
                   prefixIcon: const Icon(Icons.location_on),
                 ),
                 items: [
+                  'Takeaway',
                   'Table 1',
                   'Table 2',
                   'Table 3',
                   'Table 4',
-                  'Outside',
                 ].map((location) {
                   return DropdownMenuItem(
                     value: location,
@@ -362,7 +362,7 @@ class _CartPageState extends State<CartPage> {
                                 leading: Icon(
                                   cart.location.startsWith('Table')
                                       ? Icons.table_restaurant
-                                      : Icons.directions_walk,
+                                      : Icons.shopping_bag,
                                   color: isSelected ? primaryColor : Colors.grey,
                                 ),
                                 title: Text(

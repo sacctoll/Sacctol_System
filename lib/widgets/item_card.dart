@@ -253,7 +253,7 @@ class ItemCard extends StatelessWidget {
                     leading: Icon(
                       cart.location.startsWith('Table')
                           ? Icons.table_restaurant
-                          : Icons.directions_walk,
+                          : Icons.shopping_bag,
                       color: Theme.of(context).primaryColor,
                     ),
                     title: Text(cart.location),
@@ -308,7 +308,7 @@ class ItemCard extends StatelessWidget {
   void _showCreateCartDialog(BuildContext context) async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final TextEditingController nameController = TextEditingController();
-    String selectedLocation = 'Table 1';
+    String selectedLocation = 'Takeaway';
 
     final result = await showDialog<bool>(
       context: context,
@@ -336,11 +336,11 @@ class ItemCard extends StatelessWidget {
                         prefixIcon: const Icon(Icons.location_on),
                       ),
                       items: [
+                        'Takeaway',
                         'Table 1',
                         'Table 2',
                         'Table 3',
                         'Table 4',
-                        'Outside',
                       ].map((location) {
                         return DropdownMenuItem(
                           value: location,

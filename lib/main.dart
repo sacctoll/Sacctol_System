@@ -7,6 +7,7 @@ import 'pages/create_item_page.dart';
 import 'pages/cart_page.dart';
 import 'pages/saved_carts_page.dart';
 import 'pages/protected_dashboard_page.dart';
+import 'pages/history_page.dart';
 
 const Color kPrimaryColor = Color(0xFF205781); 
 
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
         '/cart': (context) =>  CartPage(),
         '/saved': (context) => const SavedCartsPage(),
         '/dashboard': (context) => const ProtectedDashboardPage(),
+        '/history': (context) => const HistoryPage(),
       },
     );
   }
