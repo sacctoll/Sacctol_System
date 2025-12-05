@@ -11,7 +11,10 @@ class ItemCard extends StatelessWidget {
 
   final NumberFormat formatter = NumberFormat("#,###", "en_US");
 
-  void _showDetailsDialog(BuildContext context) {
+  void _showDetailsDialog(BuildContext context) async {
+    final isAuthorized = await _promptPassword(context);
+    if (!isAuthorized) return;
+
     showDialog(
       context: context,
       builder:
@@ -36,25 +39,91 @@ class ItemCard extends StatelessWidget {
     );
   }
 
-  void _promptPasswordBeforeEdit(BuildContext context) async {
-  final TextEditingController _passwordController = TextEditingController();
-  final correctPassword = 'admin123'; // Change this as needed
+  Future<bool> _promptPassword(BuildContext context) async {
+    final TextEditingController passwordController = TextEditingController();
+    const correctPassword = 'admin123';
 
-  final result = await showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) {
-      return AlertDialog(
-        title: const Text('Password Required'),
-        content: TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Enter Password'),
-          onSubmitted: (_) {
-            if (_passwordController.text == correctPassword) {
-              Navigator.of(context).pop(true);
-            }
-          },
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.lock, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              const Text('Password Required'),
+            ],
+          ),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Enter Password',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.password),
+            ),
+            onSubmitted: (_) {
+              if (passwordController.text == correctPassword) {
+                Navigator.of(context).pop(true);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final entered = passwordController.text;
+                Navigator.of(context).pop(entered == correctPassword);
+              },
+              child: const Text('Enter'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Incorrect password'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+
+    return result ?? false;
+  }
+
+  void _promptPasswordBeforeEdit(BuildContext context) async {
+    final isAuthorized = await _promptPassword(context);
+    if (isAuthorized) {
+      _showEditDialog(context);
+    }
+  }
+
+  void _promptPasswordBeforeDelete(BuildContext context) async {
+    final isAuthorized = await _promptPassword(context);
+    if (!isAuthorized) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.red),
+            const SizedBox(width: 8),
+            const Text('Confirm Delete'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "${item.name}"?\nThis action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -62,28 +131,29 @@ class ItemCard extends StatelessWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              final entered = _passwordController.text;
-              Navigator.of(context).pop(entered == correctPassword);
-            },
-            child: const Text('Enter'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
           ),
         ],
-      );
-    },
-  );
-
-  if (result == true) {
-    _showEditDialog(context);
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Incorrect password'),
-        duration: Duration(seconds: 1),
       ),
     );
+
+    if (confirmed == true) {
+      final itemProvider = Provider.of<ItemProvider>(context, listen: false);
+      await itemProvider.removeItem(item);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${item.name} deleted'),
+          behavior: SnackBarBehavior.fixed,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
   }
-}
 
 
   void _showEditDialog(BuildContext context) {
@@ -155,6 +225,187 @@ class ItemCard extends StatelessWidget {
     );
   }
 
+  void _showTableSelectionDialog(BuildContext context) async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final currentCart = cartProvider.currentCart;
+
+    // If there are active carts, show selection dialog
+    if (cartProvider.activeCarts.isNotEmpty) {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.shopping_cart, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              const Text('Select Cart'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Add item to existing cart or create new one?'),
+                const SizedBox(height: 16),
+                ...cartProvider.activeCarts.map((cart) {
+                  return ListTile(
+                    leading: Icon(
+                      cart.location.startsWith('Table')
+                          ? Icons.table_restaurant
+                          : Icons.directions_walk,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    title: Text(cart.location),
+                    subtitle: cart.customerName.isNotEmpty
+                        ? Text(cart.customerName)
+                        : const Text('No name'),
+                    trailing: Text('${cart.items.length} items'),
+                    onTap: () => Navigator.pop(context, cart.id),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  );
+                }),
+                const Divider(height: 24),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create New Cart'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 45),
+                  ),
+                  onPressed: () => Navigator.pop(context, 'new'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == null) return; // User cancelled
+
+      if (result == 'new') {
+        // Show create new cart dialog
+        _showCreateCartDialog(context);
+      } else {
+        // Switch to selected cart and add item
+        cartProvider.switchCart(result);
+        _addItemToCart(context);
+      }
+    } else {
+      // No active carts, create first one
+      _showCreateCartDialog(context);
+    }
+  }
+
+  void _showCreateCartDialog(BuildContext context) async {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final TextEditingController nameController = TextEditingController();
+    String selectedLocation = 'Table 1';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.add_shopping_cart, color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  const Text('New Cart'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedLocation,
+                      decoration: InputDecoration(
+                        labelText: 'Location',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.location_on),
+                      ),
+                      items: [
+                        'Table 1',
+                        'Table 2',
+                        'Table 3',
+                        'Table 4',
+                        'Outside',
+                      ].map((location) {
+                        return DropdownMenuItem(
+                          value: location,
+                          child: Text(location),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            selectedLocation = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Customer Name (Optional)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        prefixIcon: const Icon(Icons.person),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    cartProvider.createNewCart(selectedLocation, nameController.text);
+                    Navigator.pop(context, true);
+                  },
+                  child: const Text('Create & Add Item'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true) {
+      _addItemToCart(context);
+    }
+  }
+
+  void _addItemToCart(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.addItem(item);
+    
+    final count = cartProvider.getItemCount(item);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${item.name} x$count added to ${cartProvider.currentCart?.location ?? "cart"}'),
+        behavior: SnackBarBehavior.fixed,
+        duration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -169,24 +420,7 @@ class ItemCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ElevatedButton(
-              onPressed: () {
-                cartProvider.addItem(item);
-                final existingEntry = cartProvider.items.firstWhere(
-                  (entry) =>
-                      entry['item'].name == item.name &&
-                      entry['item'].size == item.size,
-                  orElse: () => <String, dynamic>{}, // ✅ valid default
-                );
-                final count = existingEntry['count'] ?? 1;
-
-                final snackBar = SnackBar(
-  content: Text('${item.name} x$count added to cart'),
-  behavior: SnackBarBehavior.fixed, // <- Default bottom placement
-  duration: const Duration(milliseconds: 300),
-);
-ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
-              },
+              onPressed: () => _showTableSelectionDialog(context),
               child: const Text('Add to Cart'),
             ),
             IconButton(
@@ -198,23 +432,11 @@ ScaffoldMessenger.of(context).showSnackBar(snackBar);
               icon: const Icon(Icons.edit),
               tooltip: 'Edit Item',
               onPressed: () => _promptPasswordBeforeEdit(context),
-
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () async {
-                await itemProvider.removeItem(item);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${item.name} deleted'),
-                    behavior: SnackBarBehavior.fixed,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    duration: const Duration(milliseconds: 300),
-                  ),
-                );
-              },
+              tooltip: 'Delete Item',
+              onPressed: () => _promptPasswordBeforeDelete(context),
             ),
           ],
         ),
