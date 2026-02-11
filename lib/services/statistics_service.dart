@@ -148,7 +148,7 @@ class StatisticsService {
       monthlyBreakdown[entry.key] = _calculateOverallStats(entry.value);
     }
 
-    return {'breakdown': monthlyBreakdown.entries.map((e) => {'period': e.key, ...e.value}).toList()};
+    return {'breakdown': monthlyBreakdown.entries.map((e) => {'date': e.key, ...e.value}).toList()};
   }
 
   static Map<String, List<Map<String, dynamic>>> _calculateYearlyBreakdown(List<Map<String, dynamic>> carts) {
@@ -169,7 +169,7 @@ class StatisticsService {
       yearlyBreakdown[entry.key] = _calculateOverallStats(entry.value);
     }
 
-    return {'breakdown': yearlyBreakdown.entries.map((e) => {'year': e.key, ...e.value}).toList()};
+    return {'breakdown': yearlyBreakdown.entries.map((e) => {'date': e.key, ...e.value}).toList()};
   }
 
   static Map<String, List<Map<String, dynamic>>> _calculateProductPerformance(List<Map<String, dynamic>> carts) {
@@ -552,17 +552,88 @@ class StatisticsService {
         }
       }
       
-      // Recent Daily Performance
+      // Complete Daily Performance - ALL DATA
       final daily = stats['daily']?['breakdown'];
       if (daily != null && daily.isNotEmpty) {
-        final recentDays = daily.take(14).toList(); // Show last 14 days
-        buffer.writeln('📊 RECENT DAILY PERFORMANCE (Last ${recentDays.length} days)');
+        // Sort by date (most recent first)
+        final sortedDays = List.from(daily)..sort((a, b) => b['date'].compareTo(a['date']));
+        
+        buffer.writeln('📊 COMPLETE DAILY PERFORMANCE (All ${sortedDays.length} days)');
         buffer.writeln('─' * 70);
-        for (final day in recentDays) {
-          final orders = day['totalTransactions'];
-          final profit = day['totalProfit'];
+        double totalDailyProfit = 0;
+        int totalDailyOrders = 0;
+        
+        for (final day in sortedDays) {
+          final orders = (day['totalTransactions'] as num? ?? 0).toInt();
+          final profit = (day['totalProfit'] as num? ?? 0).toDouble();
+          final revenue = (day['totalRevenue'] as num? ?? 0).toDouble();
+          totalDailyProfit += profit;
+          totalDailyOrders += orders;
+          
           final performanceIcon = orders >= 10 ? '🔥' : orders >= 5 ? '📈' : orders >= 1 ? '📊' : '💤';
-          buffer.writeln('$performanceIcon ${day['date']} → ${orders.toString().padLeft(2)} orders | Profit: ${formatter.format(profit)} L.L');
+          buffer.writeln('$performanceIcon ${day['date']} → ${orders.toString().padLeft(2)} orders | Rev: ${formatter.format(revenue)} L.L | Profit: ${formatter.format(profit)} L.L');
+        }
+        buffer.writeln('─' * 70);
+        buffer.writeln('📊 Daily Summary: ${sortedDays.length} days | ${totalDailyOrders} total orders | ${formatter.format(totalDailyProfit)} L.L total profit');
+        buffer.writeln();
+      }
+      
+      // Complete Monthly Performance - ALL DATA
+      final monthly = stats['monthly']?['breakdown'];
+      if (monthly != null && monthly.isNotEmpty) {
+        // Sort by month (most recent first)
+        final sortedMonths = List.from(monthly)..sort((a, b) => b['date'].compareTo(a['date']));
+        
+        buffer.writeln('📅 COMPLETE MONTHLY PERFORMANCE (All ${sortedMonths.length} months)');
+        buffer.writeln('─' * 70);
+        double totalMonthlyProfit = 0;
+        int totalMonthlyOrders = 0;
+        
+        for (final month in sortedMonths) {
+          final orders = (month['totalTransactions'] as num? ?? 0).toInt();
+          final profit = (month['totalProfit'] as num? ?? 0).toDouble();
+          final revenue = (month['totalRevenue'] as num? ?? 0).toDouble();
+          final itemsSold = (month['totalItemsSold'] as num? ?? 0).toInt();
+          totalMonthlyProfit += profit;
+          totalMonthlyOrders += orders;
+          
+          final performanceIcon = orders >= 50 ? '🚀' : orders >= 20 ? '🔥' : orders >= 10 ? '📈' : orders >= 1 ? '📊' : '💤';
+          final monthName = DateFormat('MMMM yyyy').format(DateTime.parse(month['date'] + '-01'));
+          buffer.writeln('$performanceIcon $monthName');
+          buffer.writeln('   🛒 Orders: ${orders.toString().padLeft(3)} | 📦 Items: ${itemsSold.toString().padLeft(4)} | 💰 Revenue: ${formatter.format(revenue)} L.L | 💸 Profit: ${formatter.format(profit)} L.L');
+          if (revenue > 0) {
+            final profitMargin = (profit / revenue) * 100;
+            buffer.writeln('   📊 Profit Margin: ${profitMargin.toStringAsFixed(1)}% | 💳 Avg Order: ${formatter.format(orders > 0 ? revenue / orders : 0)} L.L');
+          }
+          buffer.writeln();
+        }
+        buffer.writeln('─' * 70);
+        buffer.writeln('📅 Monthly Summary: ${sortedMonths.length} months | ${totalMonthlyOrders} total orders | ${formatter.format(totalMonthlyProfit)} L.L total profit');
+        buffer.writeln();
+      }
+      
+      // Yearly Performance if data spans multiple years
+      final yearly = stats['yearly']?['breakdown'];
+      if (yearly != null && yearly.isNotEmpty) {
+        // Sort by year (most recent first)
+        final sortedYears = List.from(yearly)..sort((a, b) => b['date'].compareTo(a['date']));
+        
+        buffer.writeln('🗓️ YEARLY PERFORMANCE (All ${sortedYears.length} years)');
+        buffer.writeln('─' * 70);
+        for (final year in sortedYears) {
+          final orders = (year['totalTransactions'] as num? ?? 0).toInt();
+          final profit = (year['totalProfit'] as num? ?? 0).toDouble();
+          final revenue = (year['totalRevenue'] as num? ?? 0).toDouble();
+          final itemsSold = (year['totalItemsSold'] as num? ?? 0).toInt();
+          
+          final performanceIcon = orders >= 200 ? '🏆' : orders >= 100 ? '🚀' : orders >= 50 ? '🔥' : '📈';
+          buffer.writeln('$performanceIcon Year ${year['date']}');
+          buffer.writeln('   🛒 Orders: ${orders.toString().padLeft(4)} | 📦 Items: ${itemsSold.toString().padLeft(5)} | 💰 Revenue: ${formatter.format(revenue)} L.L | 💸 Profit: ${formatter.format(profit)} L.L');
+          if (revenue > 0) {
+            final profitMargin = (profit / revenue) * 100;
+            buffer.writeln('   📊 Profit Margin: ${profitMargin.toStringAsFixed(1)}% | 💳 Avg Order: ${formatter.format(orders > 0 ? revenue / orders : 0)} L.L');
+          }
+          buffer.writeln();
         }
         buffer.writeln();
       }
